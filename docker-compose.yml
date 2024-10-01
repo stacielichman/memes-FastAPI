@@ -1,0 +1,58 @@
+services:
+  meme_app:
+    build: .
+    container_name: meme_app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - minio
+      - meme_db
+    env_file:
+      - .env
+    restart: on-failure
+
+  meme_db:
+    image: postgres:15-alpine
+    ports:
+      - "5500:5432"
+    env_file:
+      - .env
+    volumes:
+      - .data/postgres_data:/var/lib/postgresql/data
+
+  minio:
+    container_name: meme_minio
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    env_file:
+      - .env
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - .data/minio_data:/data
+
+  test_app:
+    build: .
+    container_name: test_app
+    depends_on:
+      - minio
+      - test_db
+    env_file:
+      - .env
+    command: [ "pytest", "--maxfail=1" ]
+
+  test_db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: test_db
+    volumes:
+      - .data/postgres_data:/var/lib/postgresql/test_data
+
+volumes:
+  postgres_data:
+  minio_data:
